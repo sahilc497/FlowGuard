@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>FlowGuard | Water Intelligence</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --green-dark:#1b5e20;
+  --green-main:#2e7d32;
+  --green-light:#e8f5e9;
+  --overlay:rgba(255,255,255,0.88);
+  --card-radius:12px;
+  --card-shadow:0 10px 28px rgba(0,0,0,.08);
+}
+
+/* Reset & base */
+*{box-sizing:border-box;margin:0;padding:0;font-family:'Poppins',sans-serif}
+html,body{height:100%}
+body{
+  display:grid;
+  grid-template-rows:auto 1fr auto;
+  background:
+    linear-gradient(var(--overlay),var(--overlay)),
+    url("tempalate/Background.png") center/cover no-repeat fixed;
+  -webkit-font-smoothing:antialiased;
+  -moz-osx-font-smoothing:grayscale;
+  color:#16341f;
+}
+
+/* Header */
+.header{
+  background:var(--green-dark);
+  color:#fff;
+  padding:16px 40px;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  box-shadow:0 4px 12px rgba(0,0,0,.06);
+}
+.header h1{font-size:24px;font-weight:600}
+.nav-links a{color:#fff;text-decoration:none;margin-left:22px;font-weight:500}
+
+/* Main container */
+main{
+  max-width:1200px;
+  margin:0 auto;
+  padding:28px 20px;
+  overflow:auto;
+}
+
+/* Grid: left predictor, right info (scrollable) */
+.grid-container{
+  display:grid;
+  grid-template-columns: 1fr 380px;
+  gap:24px;
+  align-items:start;
+}
+
+/* Card */
+.card{
+  background:#fff;
+  border-radius:var(--card-radius);
+  padding:22px;
+  box-shadow:var(--card-shadow);
+  border-top:6px solid var(--green-main);
+  overflow:visible;
+}
+.card h2{color:var(--green-dark);margin-bottom:10px}
+
+/* Form controls */
+label{font-weight:600;margin-bottom:6px;display:block}
+input,select{
+  width:100%;
+  padding:10px;
+  border-radius:8px;
+  border:1px solid #dfe9df;
+  margin-bottom:12px;
+  font-size:14px;
+}
+button{
+  background:var(--green-main);
+  color:#fff;
+  border:none;
+  padding:12px 18px;
+  border-radius:10px;
+  font-weight:600;
+  cursor:pointer;
+}
+
+/* Result */
+.result-box{
+  background:#f7fcf8;
+  border-left:4px solid var(--green-main);
+  padding:14px;
+  border-radius:10px;
+  margin-top:12px;
+  display:none;
+}
+.result-row{display:flex;justify-content:space-between;margin-bottom:6px;font-weight:500}
+.result-value{font-weight:800}
+
+/* Info (right) specific: fixed height with its own scrollbar */
+.info-panel{
+  max-height: calc(100vh - 220px); /* header + padding + footer spare space */
+  overflow:auto;
+  padding-right:8px; /* ensure scrollbar doesn't overlap content visually */
+}
+
+/* style the inner scrollable card so it looks identical but scrolls */
+.info-panel .card{
+  margin:0;
+  border-top:6px solid var(--green-main);
+}
+
+/* custom scrollbar for webkit */
+.info-panel::-webkit-scrollbar{width:12px}
+.info-panel::-webkit-scrollbar-track{background: rgba(0,0,0,0.03); border-radius:8px}
+.info-panel::-webkit-scrollbar-thumb{background: linear-gradient(#2e7d32,#1b5e20); border-radius:8px}
+
+/* Crop info block */
+.crop-info{background:#f1f8f3;border-radius:10px;padding:18px;margin-top:6px;line-height:1.7}
+.crop-info h3{color:var(--green-dark);margin-bottom:8px}
+.crop-info ul{margin-left:18px}
+
+/* Footer */
+footer{
+  background:var(--green-dark);
+  color:#fff;
+  padding:14px;
+  text-align:center;
+}
+
+/* Responsive */
+@media(max-width:980px){
+  .grid-container{grid-template-columns:1fr}
+  .info-panel{max-height:none}
+  main{padding:20px}
+}
+</style>
+</head>
+
+<body>
+
+<!-- HEADER -->
+<header class="header">
+  <div style="display:flex;align-items:center;gap:14px">
+    <h1>FlowGuard</h1>
+  </div>
+  <nav class="nav-links">
+    <a href="#">Dashboard</a>
+    <a href="#">Profile</a>
+    <a href="#">Logout</a>
+  </nav>
+</header>
+
+<!-- MAIN -->
+<main>
+  <div class="grid-container">
+
+    <!-- LEFT: Predictor card (unchanged logic) -->
+    <div class="card">
+      <h2>Water Requirement Predictor</h2>
+      <p style="color:#234;margin-bottom:12px">Predict irrigation needs using temperature, humidity, crop stage, and ML intelligence.</p>
+
+      <label>Crop</label>
+      <select id="crop">
+        <option>Sugarcane</option>
+        <option>Rice</option>
+        <option>Wheat</option>
+      </select>
+
+      <label>Season</label>
+      <select id="season">
+        <option>Kharif</option>
+        <option>Rabi</option>
+        <option>Zaid</option>
+      </select>
+
+      <label>Soil Type</label>
+      <select id="soil">
+        <option>Clay</option>
+        <option>Loamy</option>
+        <option>Sandy</option>
+        <option>Black</option>
+      </select>
+
+      <label>Crop Duration (days)</label>
+      <input id="duration" type="number">
+
+      <label>Growth Day</label>
+      <input id="growth" type="number">
+
+      <label>Temperature (°C)</label>
+      <input id="temperature" type="number">
+
+      <label>Humidity (%)</label>
+      <input id="humidity" type="number">
+
+      <label>Area (Acres)</label>
+      <input id="area" type="number" step="0.1">
+
+      <button onclick="predictWater()">Calculate</button>
+
+      <div class="result-box" id="resultBox">
+        <div class="result-row"><span>ET₀</span><span id="et0_out"></span></div>
+        <div class="result-row"><span>Kc</span><span id="kc_out"></span></div>
+        <div class="result-row"><span>ETa</span><span id="eta_out"></span></div>
+        <hr>
+        <div class="result-row"><span>Water / Acre</span><span id="peracre_out"></span></div>
+        <div class="result-row"><strong>Total Water</strong><strong id="total_out"></strong></div>
+      </div>
+      <canvas id="chart"></canvas>
+    </div>
+
+    <!-- RIGHT: Info panel with its own scrollbar -->
+    <div class="info-panel">
+      <div class="card">
+        <h2>Crop Water & Nutrient Best Practices</h2>
+
+        <div class="crop-info">
+          <h3>💧 Water Saving Measures</h3>
+          <ul>
+            <li>Adopt drip irrigation to minimise evaporation and conveyance losses.</li>
+            <li>Schedule irrigation for early morning or late evening to reduce evaporative demand.</li>
+            <li>Perform soil moisture checks and avoid unnecessary irrigations during early vegetative stages.</li>
+            <li>Use mulch where possible to retain soil moisture and suppress weeds.</li>
+            <li>Group fields by crop and growth stage to optimise irrigation scheduling.</li>
+          </ul>
+
+          <h3 style="margin-top:12px">🌱 Fertilizer Management</h3>
+          <ul>
+            <li>Split nitrogen applications for high-demand crops (sugarcane, maize) to reduce leaching.</li>
+            <li>Prefer soil tests to determine exact nutrient needs before blanket application.</li>
+            <li>Use organic amendments (compost, FYM) to improve soil structure and water-holding capacity.</li>
+            <li>Avoid applying high doses of fertilizer immediately before heavy irrigation or rainfall.</li>
+            <li>Follow recommended doses for each crop; over-application wastes resources and harms soil health.</li>
+          </ul>
+
+          <h3 style="margin-top:12px">🌾 Crop Health & Field Practices</h3>
+          <ul>
+            <li>Ensure proper field leveling for uniform water distribution and reduced pooling.</li>
+            <li>Rotate crops to manage pests and improve soil fertility over seasons.</li>
+            <li>Use disease-resistant varieties and timely pest scouting to reduce yield loss.</li>
+            <li>Monitor leaf colour and growth regularly — sudden changes often indicate water or nutrient stress.</li>
+            <li>Record irrigation events and water volumes to build a farm-specific dataset for better decisions.</li>
+          </ul>
+
+          <h3 style="margin-top:12px">📋 Practical On-Farm Tips</h3>
+          <ul>
+            <li>Keep a simple logbook (date, area irrigated, duration, water source) — this improves scheduling over time.</li>
+            <li>Use local weather forecasts to skip irrigations before predicted heavy rainfall.</li>
+            <li>Calibrate pumps and measure actual discharge to estimate accurate water usage per hour.</li>
+            <li>Train farm workers on best irrigation timings and fertilizer placement for uniform application.</li>
+            <li>Consider on-farm demonstrations for new farmers to showcase water-saving technologies.</li>
+          </ul>
+
+          <p style="margin-top:12px;color:#346b3f;font-weight:600">Operator guidance: combine these best practices with FlowGuard predictions to reduce water usage while maintaining yields.</p>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</main>
+
+<!-- FOOTER -->
+<footer>
+  © 2026 FlowGuard • Promoting Sustainable Water Use in Agriculture
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+/* Minimal helper + predictor logic preserved */
+function $(id){return document.getElementById(id)}
+
+function kc(c,d){
+  d=+d||1;
+  if(c==="Sugarcane")return d<=45?.75:d<=90?1.1:d<=120?1.3:1.2;
+  if(c==="Rice")return d<=30?.8:d<=60?1.05:d<=90?1.2:1.1;
+  return d<=30?.7:d<=60?1:d<=90?1.15:1;
+}
+
+function et0(temp,hum){
+  return 0.0023*(temp+17.8)*Math.sqrt(Math.max(0,100-hum));
+}
+
+let chart; // chart instance
+
+async function predictWater(){
+
+  const c=$("crop").value;
+  const g=$("growth").value||1;
+  const t=+($("temperature").value||30);
+  const h=+($("humidity").value||60);
+  const a=+($("area").value||1);
+
+  const k = kc(c,g);
+  const e0 = et0(t,h);
+  const eta = e0 * k;
+
+  // ---------- 📊 TIME SERIES FOR GRAPH ----------
+  let hours = [];
+  let waterSeries = [];
+
+  for(let hour=0; hour<24; hour++){
+
+    // same logic — just simulated variation
+    let tempVar = t + 5*Math.sin((hour-6)*Math.PI/12);
+    let humVar = h - 15*Math.sin((hour-6)*Math.PI/12);
+
+    let e0_hour = et0(tempVar, humVar);
+    let eta_hour = e0_hour * k;
+
+    let water = eta_hour * 1000;
+
+    hours.push(hour);
+    waterSeries.push(water.toFixed(2));
+  }
+
+  // ---------- BACKEND CALL (UNCHANGED) ----------
+  const payload = {
+    crop: c, 
+    season: $("season").value, 
+    soil: $("soil").value,
+    duration: $("duration").value||150, 
+    growth: g,
+    temperature: t, 
+    humidity: h, 
+    area: a
+  };
+
+  try {
+    const res = await fetch("http://127.0.0.1:5002/predict",{
+      method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(payload)
+    });
+
+    const data = await res.json();
+
+    // ---------- DISPLAY ----------
+    $("et0_out").innerText = e0.toFixed(2) + " mm/day";
+    $("kc_out").innerText = k;
+    $("eta_out").innerText = eta.toFixed(2) + " mm/day";
+    $("peracre_out").innerText = (data.water_per_acre_liters || '--') + " L";
+    $("total_out").innerText = (data.total_water_liters || '--') + " L";
+
+    $("resultBox").style.display = "block";
+
+    // ---------- 📈 CHART ----------
+    if(chart) chart.destroy();
+
+    chart = new Chart(document.getElementById("chart"),{
+      type:'line',
+      data:{
+        labels: hours,
+        datasets:[{
+          label:'Water Usage (Litres)',
+          data: waterSeries,
+          borderWidth: 3,
+          tension: 0.4
+        }]
+      },
+      options:{
+        plugins:{
+          title:{
+            display:true,
+            text:'Water Usage vs Time (Peak at Noon)'
+          }
+        },
+        scales:{
+          x:{title:{display:true,text:'Hour'}},
+          y:{title:{display:true,text:'Water (Litres)'}}
+        }
+      }
+    });
+
+  } catch (err) {
+    alert("Prediction backend error. Make sure Flask is running on port 5002.\n" + err.message);
+  }
+}
+</script>
+
+</body>
+</html>

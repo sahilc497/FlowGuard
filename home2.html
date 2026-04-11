@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Smart Farm Receiver Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+
+  <style>
+    body {
+      font-family: 'Segoe UI';
+      background: #0b1220;
+      color: white;
+      text-align: center;
+    }
+
+    h1 {
+      margin: 20px;
+      color: #00e5ff;
+    }
+
+    .container {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: #111827;
+      margin: 15px;
+      padding: 20px;
+      width: 260px;
+      border-radius: 20px;
+      box-shadow: 0 0 15px rgba(0,255,255,0.2);
+      transition: 0.3s;
+    }
+
+    .card:hover {
+      transform: scale(1.05);
+    }
+
+    .value {
+      font-size: 24px;
+      margin-top: 10px;
+      color: #22c55e;
+    }
+
+    button {
+      padding: 10px 18px;
+      margin: 8px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 15px;
+    }
+
+    .on { background: #16a34a; }
+    .off { background: #dc2626; }
+
+  </style>
+</head>
+
+<body>
+
+<h1>🌱 Smart Farm Dashboard (NRF + MQTT)</h1>
+
+<div class="container">
+
+  <div class="card">
+    <h3>🌿 Soil Moisture</h3>
+    <div id="soil" class="value">-- %</div>
+  </div>
+
+  <div class="card">
+    <h3>🚿 Flow Rate</h3>
+    <div id="flowRate" class="value">-- L/min</div>
+  </div>
+
+  <div class="card">
+    <h3>📦 Total Water</h3>
+    <div id="total" class="value">-- L</div>
+  </div>
+
+  <div class="card">
+    <h3>⚡ Motor Status</h3>
+    <div id="relay" class="value">OFF</div>
+
+    <button class="on" onclick="sendCmd('ON')">ON</button>
+    <button class="off" onclick="sendCmd('OFF')">OFF</button>
+  </div>
+
+</div>
+
+<script>
+
+  // ===== MQTT CONFIG =====
+  const broker = "wss://907b84ccacdf4ce7868dac677f27ebb5.s1.eu.hivemq.cloud:8884/mqtt";
+
+  const options = {
+    username: localStorage.getItem('mqtt_username') || '',
+    password: localStorage.getItem('mqtt_password') || '',
+    reconnectPeriod: 1000
+  };
+
+  const client = mqtt.connect(broker, options);
+
+  client.on("connect", () => {
+    console.log("✅ Connected");
+
+    client.subscribe("esp32_2/soil");
+    client.subscribe("esp32_2/flow/rate");
+    client.subscribe("esp32_2/flow/total");
+    client.subscribe("esp32_2/relay/status");
+  });
+
+  client.on("message", (topic, message) => {
+    let msg = message.toString();
+    console.log(topic, msg);
+
+    if (topic === "esp32_2/soil") {
+      document.getElementById("soil").innerText = msg + " %";
+    }
+
+    if (topic === "esp32_2/flow/rate") {
+      document.getElementById("flowRate").innerText = msg + " L/min";
+    }
+
+    if (topic === "esp32_2/flow/total") {
+      document.getElementById("total").innerText = msg + " L";
+    }
+
+    if (topic === "esp32_2/relay/status") {
+      document.getElementById("relay").innerText = msg;
+    }
+  });
+
+  function sendCmd(cmd) {
+    client.publish("esp32/relay/control", cmd);
+  }
+
+</script>
+
+</body>
+</html>

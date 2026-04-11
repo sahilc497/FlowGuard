@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>ESP32 Smart Farm Dashboard</title>
+  <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+  <style>
+    body {
+      font-family: Arial;
+      background: #0f172a;
+      color: white;
+      text-align: center;
+    }
+    h1 {
+      margin-top: 20px;
+    }
+    .card {
+      display: inline-block;
+      background: #1e293b;
+      padding: 20px;
+      margin: 15px;
+      border-radius: 15px;
+      width: 250px;
+      box-shadow: 0 0 10px #000;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 10px;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+    .on { background: green; color: white; }
+    .off { background: red; color: white; }
+    .auto { background: orange; color: white; }
+  </style>
+</head>
+
+<body>
+
+<h1>🌱 ESP32 Smart Farm Dashboard</h1>
+
+<div class="card">
+  <h2>🌡 Temperature & Humidity</h2>
+  <p id="dht">Waiting...</p>
+</div>
+
+<div class="card">
+  <h2>🌿 Soil Moisture</h2>
+  <p id="soil">Waiting...</p>
+</div>
+
+<div class="card">
+  <h2>💧 Water Flow</h2>
+  <p id="flow">Waiting...</p>
+</div>
+
+<div class="card">
+  <h2>⚡ Motor Control</h2>
+  <p id="relayStatus">OFF</p>
+  <button class="on" onclick="sendCommand('ON')">ON</button>
+  <button class="off" onclick="sendCommand('OFF')">OFF</button>
+  <button class="auto" onclick="sendCommand('AUTO')">AUTO</button>
+</div>
+
+<script>
+  // ===== MQTT CONFIG =====
+  const broker = "wss://907b84ccacdf4ce7868dac677f27ebb5.s1.eu.hivemq.cloud:8884/mqtt";
+
+  const options = {
+    username: localStorage.getItem('mqtt_username') || '',
+    password: localStorage.getItem('mqtt_password') || '',
+    reconnectPeriod: 1000
+  };
+
+  const client = mqtt.connect(broker, options);
+
+  client.on("connect", () => {
+    console.log("✅ Connected to MQTT");
+
+    client.subscribe("esp32_1/dht22");
+    client.subscribe("esp32_1/soil");
+    client.subscribe("esp32_1/flow");
+    client.subscribe("esp32_1/relay/status");
+  });
+
+  client.on("message", (topic, message) => {
+    let msg = message.toString();
+    console.log(topic + ": " + msg);
+
+    if (topic === "esp32_1/dht22") {
+      document.getElementById("dht").innerText = msg;
+    }
+
+    if (topic === "esp32_1/soil") {
+      document.getElementById("soil").innerText = msg;
+    }
+
+    if (topic === "esp32_1/flow") {
+      document.getElementById("flow").innerText = msg;
+    }
+
+    if (topic === "esp32_1/relay/status") {
+      document.getElementById("relayStatus").innerText = msg;
+    }
+  });
+
+  function sendCommand(cmd) {
+    client.publish("esp32_1/relay", cmd);
+  }
+</script>
+
+</body>
+</html>

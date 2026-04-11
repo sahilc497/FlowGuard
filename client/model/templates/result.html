@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>FlowGuard | Leak Detection Results</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+
+<style>
+body{
+    font-family:'Poppins',sans-serif;
+    background:linear-gradient(rgba(255,255,255,0.88),rgba(255,255,255,0.88)),
+               url("tempalate/Background.png") center/cover no-repeat fixed;
+    color:#16341f;
+}
+.header{
+    background:#1b5e20;
+    color:#fff;
+    padding:16px 32px;
+    font-size:22px;
+    font-weight:600;
+}
+.card{
+    border-radius:14px;
+    box-shadow:0 10px 28px rgba(0,0,0,.08);
+    border-top:6px solid #2e7d32;
+}
+.alert-warning{
+    background:#fff8e1;
+    border-left:6px solid #f9a825;
+}
+.article-box{
+    background:#f1f8f3;
+    border-radius:12px;
+    padding:18px;
+    margin-top:18px;
+}
+.article-box h5{
+    color:#1b5e20;
+}
+footer{
+    background:#1b5e20;
+    color:#fff;
+    text-align:center;
+    padding:12px;
+    margin-top:30px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="header">FlowGuard • Leak Detection Report</div>
+
+<div class="container mt-4">
+
+<div class="card p-4 mb-4">
+    <h3>📊 Leak Detection Results</h3>
+
+
+    <img src="/{{ plot_path }}" class="img-fluid rounded mb-4">
+
+    <h5>Recent Predictions</h5>
+    {{ tables|safe }}
+
+    <a href="/" class="btn btn-success mt-3">Analyze Another File</a>
+</div>
+
+<!-- ARTICLES SECTION -->
+<div class="card p-4">
+<h4>🌊 Why Leak Detection Matters</h4>
+
+<div class="article-box">
+<h5>🚨 Water Leakage & Infrastructure Damage</h5>
+<p>
+Continuous water leakage weakens pipelines, causes soil erosion, and leads to road collapses.
+In agricultural fields, leaks can damage root zones and reduce crop productivity.
+</p>
+</div>
+
+<div class="article-box">
+<h5>💧 Water Scarcity & Resource Loss</h5>
+<p>
+Undetected leaks result in massive water loss every year. In water-stressed regions,
+this directly impacts irrigation availability and drinking water supply.
+</p>
+</div>
+
+<div class="article-box">
+<h5>⚠️ Flooding & Electrical Hazards</h5>
+<p>
+Sudden pipeline bursts can cause flooding, damage electrical motors, and pose serious
+safety risks to farmers and workers.
+</p>
+</div>
+
+<div class="article-box">
+<h5>🌱 Environmental & Economic Impact</h5>
+<p>
+Leak-related wastage increases pumping costs, electricity consumption,
+and carbon footprint while stressing groundwater resources.
+</p>
+</div>
+
+</div>
+
+</div>
+
+<footer>
+© 2026 FlowGuard • Smart Monitoring for Safer Water Systems
+</footer>
+
+</body>
+</html>

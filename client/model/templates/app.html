@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>FlowGuard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+body { margin:0; font-family:Arial; background:#f4f6f7; }
+header { background:#1f6f2e; color:white; padding:15px; display:flex; justify-content:space-between; }
+.container { display:flex; padding:30px; gap:20px; }
+.panel { background:white; padding:20px; flex:1; border-radius:10px; }
+input,select { width:100%; padding:8px; margin:6px 0; }
+button { background:green; color:white; padding:10px; border:none; width:100%; }
+.result { background:#e8f5e9; padding:15px; margin-top:10px; border-radius:8px; }
+</style>
+</head>
+
+<body>
+
+<header>
+<h2>FlowGuard</h2>
+<div>Dashboard | Profile | Logout</div>
+</header>
+
+<div class="container">
+
+<div class="panel">
+<h3>Water Requirement Predictor</h3>
+
+<select id="crop">
+<option>Rice</option>
+<option>Wheat</option>
+</select>
+
+<input id="duration" placeholder="Duration (days)">
+<input id="growth" placeholder="Growth Day">
+<input id="temperature" placeholder="Temperature">
+<input id="humidity" placeholder="Humidity">
+<input id="area" placeholder="Area (acres)">
+
+<button onclick="predict()">Calculate</button>
+
+<div class="result">
+<p>ET₀: <span id="et0"></span></p>
+<p>Kc: <span id="kc"></span></p>
+<p>ETa: <span id="eta"></span></p>
+<p>Water/Acre: <span id="water"></span></p>
+<p><b>Total Water: <span id="total"></span></b></p>
+</div>
+
+<canvas id="chart"></canvas>
+
+</div>
+
+<div class="panel">
+<h3>Best Practices</h3>
+<ul>
+<li>Irrigate morning/evening</li>
+<li>Avoid overwatering</li>
+<li>Check pipelines</li>
+</ul>
+</div>
+
+</div>
+
+<script>
+let chart;
+
+async function predict(){
+
+    const data={
+        crop:crop.value,
+        duration:duration.value,
+        growth:growth.value,
+        temperature:temperature.value,
+        humidity:humidity.value,
+        area:area.value
+    };
+
+    const res=await fetch('/predict',{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify(data)
+    });
+
+    const r=await res.json();
+
+    et0.innerText=r.et0;
+    kc.innerText=r.kc;
+    eta.innerText=r.eta;
+    water.innerText=r.water_per_acre;
+    total.innerText=r.total_water;
+
+    if(chart) chart.destroy();
+
+    chart=new Chart(document.getElementById('chart'),{
+        type:'line',
+        data:{
+            labels:r.time,
+            datasets:[{
+                label:'Water Requirement',
+                data:r.water_series,
+                borderWidth:2
+            }]
+        }
+    });
+}
+</script>
+
+</body>
+</html>

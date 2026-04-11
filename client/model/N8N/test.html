@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  <button onclick="sendLeak()">🚨 Leak Detected</button>
+
+<script>
+function sendLeak() {
+  fetch("http://localhost:5678/webhook/f1956b86-4ee1-47dd-b046-0ab71e519419", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      event: "LEAK_DETECTED",
+      severity: "HIGH"
+    })
+  });
+}
+</script>
+
+</body>
+</html>
