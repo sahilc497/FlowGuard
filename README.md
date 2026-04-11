@@ -405,7 +405,7 @@ For issues or questions:
 
 ## 📄 License
 
-[Your License Here]
+Created by Team VectorOne
 
 ---
 
