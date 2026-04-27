@@ -55,6 +55,7 @@
       if ($stmt = $conn->prepare("SELECT phone FROM farmers WHERE id = ? LIMIT 1")) {
           $stmt->bind_param("i", $farmer_id);
           $stmt->execute();
+          $phoneDb = null; // Initialize to avoid unassigned variable warning
           $stmt->bind_result($phoneDb);
           if ($stmt->fetch()) $phone = trim((string)$phoneDb);
           $stmt->close();
@@ -112,7 +113,7 @@
       $response = curl_exec($ch);
       $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
       $curlErr  = curl_errno($ch) ? curl_error($ch) : null;
-      curl_close($ch);
+      // curl_close($ch); // Deprecated in PHP 8.5+
 
       if ($curlErr) {
           echo json_encode(["ok" => false, "msg" => "cURL Error: " . $curlErr]);
@@ -184,44 +185,41 @@
       exit();
   }
 
-  /* ========== DYNAMIC DEVICE NAME (from DB) ========== */
-  $deviceNameRaw = "esp32_1";
-  $mqttTopicBase = "esp32_1";
-  $deviceIdSafe = "esp32_1";
+  /* ========== DYNAMIC DEVICES (from DB) ========== */
+  $motors = [];
   $farmer_id_for_device = intval($_SESSION['farmer_id']);
-  $motor_name_db = "";
-  
-  if ($stmt_dev = $conn->prepare("SELECT motor_name FROM motors WHERE farmer_id = ? LIMIT 1")) {
+  if ($stmt_dev = $conn->prepare("SELECT id, motor_name FROM motors WHERE farmer_id = ?")) {
       $stmt_dev->bind_param("i", $farmer_id_for_device);
       $stmt_dev->execute();
-      $stmt_dev->bind_result($motor_name_db);
-      
-      if ($stmt_dev->fetch() && !empty($motor_name_db)) {
-          $deviceNameRaw = $motor_name_db;
-          $mqttTopicBase = rtrim($deviceNameRaw, "/#");
+      $res_dev = $stmt_dev->get_result();
+      while ($row = $res_dev->fetch_assoc()) {
+          $mqttBase = rtrim($row['motor_name'], "/#");
+          if ($mqttBase === "") $mqttBase = "esp32_" . $row['id'];
           
-          if ($mqttTopicBase === "") {
-              $mqttTopicBase = "esp32_1";
-          }
-          
-          $deviceIdSafe = preg_replace('/[^a-zA-Z0-9_-]/', '_', $mqttTopicBase);
-          
-          if ($deviceIdSafe === "") {
-              $deviceIdSafe = "esp32_1";
-          }
-          
-          // Log for verification
-          error_log("✅ Motor loaded for Farmer $farmer_id_for_device: $mqttTopicBase");
-      } else {
-          error_log("⚠️  No motor found for Farmer $farmer_id_for_device, using default: esp32_1");
+          $motors[] = [
+              'id' => $row['id'],
+              'name' => $row['motor_name'],
+              'topic_base' => $mqttBase,
+              'id_safe' => preg_replace('/[^a-zA-Z0-9_-]/', '_', $mqttBase)
+          ];
       }
-      
       $stmt_dev->close();
   }
-  $displayMotorName = "Motor 1";
-  if (!empty($mqttTopicBase)) {
-      $displayMotorName = $mqttTopicBase;
+
+  // Fallback if no motors found
+  if (empty($motors)) {
+      $motors[] = [
+          'id' => 1,
+          'name' => 'Motor 1',
+          'topic_base' => 'esp32_1',
+          'id_safe' => 'esp32_1'
+      ];
   }
+  
+  // Default values for header (backward compatibility or first motor)
+  $mqttTopicBase = $motors[0]['topic_base'];
+  $deviceIdSafe = $motors[0]['id_safe'];
+  $displayMotorName = $motors[0]['name'];
 
   /* ========== AJAX SAVE SENSOR DATA ========== */
   if ($_SERVER["REQUEST_METHOD"] === "POST" && isset($_POST["save_sensor"])) {
@@ -924,41 +922,47 @@
 
     <main>
       <div class="content-row">
-        <!-- LEFT: Sensor Card -->
-        <section class="sensor-card" aria-labelledby="sensor-title">
-          <div class="card-header">
-            <div class="card-title" id="sensor-title"><?php echo htmlspecialchars($displayMotorName, ENT_QUOTES); ?> — Live Monitoring</div>
+        <!-- LEFT: Sensor Cards -->
+        <div style="display: flex; flex-direction: column; gap: 30px;">
+          <?php foreach ($motors as $motor): ?>
+          <section class="sensor-card" id="card_<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>" aria-labelledby="title_<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>">
+            <div class="card-header">
+              <div class="card-title" id="title_<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>">
+                <?php echo htmlspecialchars($motor['name'], ENT_QUOTES); ?> — Live Monitoring
+              </div>
 
-            <div class="card-actions" role="toolbar">
-              <button class="back-btn" onclick="goBack()" title="Back to previous page" aria-label="Back">← Back</button>
-              <div class="device-pill" title="Device"><?php echo htmlspecialchars($mqttTopicBase, ENT_QUOTES); ?></div>
-            </div>
-          </div>
-
-          <div class="card-body">
-            <div class="data-row">
-              <div class="data-left">Temperature / Humidity</div>
-              <div id="<?php echo htmlspecialchars($deviceIdSafe, ENT_QUOTES); ?>_dht22" class="value">--</div>
+              <div class="card-actions" role="toolbar">
+                <button class="back-btn" onclick="goBack()" title="Back to previous page" aria-label="Back">← Back</button>
+                <div class="device-pill" title="Device"><?php echo htmlspecialchars($motor['topic_base'], ENT_QUOTES); ?></div>
+              </div>
             </div>
 
-            <div class="data-row">
-              <div class="data-left">Soil Moisture</div>
-              <div id="<?php echo htmlspecialchars($deviceIdSafe, ENT_QUOTES); ?>_soil" class="value">--</div>
-            </div>
+            <div class="card-body">
+              <div class="data-row">
+                <div class="data-left">Temperature / Humidity</div>
+                <div id="<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>_dht22" class="value">--</div>
+              </div>
 
-            <div class="data-row">
-              <div class="data-left">Total Water Flow (Litres)</div>
-              <div id="<?php echo htmlspecialchars($deviceIdSafe, ENT_QUOTES); ?>_flow" class="value">--</div>
-            </div>
+              <div class="data-row">
+                <div class="data-left">Soil Moisture</div>
+                <div id="<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>_soil" class="value">--</div>
+              </div>
 
-            <div class="data-row">
-              <div class="data-left">Motor Status</div>
-              <div id="<?php echo htmlspecialchars($deviceIdSafe, ENT_QUOTES); ?>_relay_status" class="status-off">--</div>
-            </div>
+              <div class="data-row">
+                <div class="data-left">Total Water Flow (Litres)</div>
+                <div id="<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>_flow" class="value">--</div>
+              </div>
 
-            <div class="hint" id="saveHint">Live readings are being saved every 30 seconds when new data arrives.</div>
-          </div>
-        </section>
+              <div class="data-row">
+                <div class="data-left">Motor Status</div>
+                <div id="<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>_relay_status" class="status-off">--</div>
+              </div>
+
+              <div class="hint saveHintClass" id="saveHint_<?php echo htmlspecialchars($motor['id_safe'], ENT_QUOTES); ?>">Live readings are being saved every 30 seconds when new data arrives.</div>
+            </div>
+          </section>
+          <?php endforeach; ?>
+        </div>
 
         <!-- RIGHT: Article / Advisories -->
         <aside class="article-section" aria-labelledby="advisory-title">
@@ -1039,19 +1043,21 @@
       const FARMER_ID = <?php echo intval($_SESSION['farmer_id']); ?>;
 
       // Device/topic names populated from server side
-      const MQTT_TOPIC_BASE = "<?php echo addslashes($mqttTopicBase); ?>";
-      const DEVICE_ID_SAFE = "<?php echo addslashes($deviceIdSafe); ?>";
+      const MOTORS = <?php echo json_encode($motors); ?>;
+      const MQTT_TOPIC_BASE = "<?php echo addslashes($mqttTopicBase); ?>"; // default or first
+      const DEVICE_ID_SAFE = "<?php echo addslashes($deviceIdSafe); ?>"; // default or first
 
-      // sensor state
-      let sensor = { temp: null, hum: null, soil: null, flow: null, motor: null, total_volume: null }; // NEW CODE: total_volume
+      // sensor state - now indexed by device_id_safe
+      let sensorStates = {};
+      MOTORS.forEach(m => {
+          sensorStates[m.id_safe] = { 
+              temp: null, hum: null, soil: null, flow: null, motor: null, total_volume: null,
+              lastSavedAt: 0, pendingSave: false, cumulativeFlow: 0.0, prevSaveTime: Date.now()
+          };
+      });
+
       // throttle saves to DB (ms)
       const SAVE_INTERVAL_MS = 30 * 1000; // 30 seconds
-      let lastSavedAt = 0;
-      let pendingSave = false;
-
-      // cumulative flow variables
-      let cumulativeFlow = 0.0; // liters accumulated since last webhook (resets after trigger)
-      let prevSaveTime = Date.now(); // used to compute actual elapsed time between saves
       let lastWebhookAt = 0;
 
       // Utility to format time for debug/hint
@@ -1087,24 +1093,16 @@
         mqttClient.on("connect", () => {
           console.log("✅ Connected to HiveMQ Cloud");
           
-          // Subscribe to individual sensor topics
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/dht22", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/dht22");
-          });
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/soil", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/soil");
-          });
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/flow", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/flow");
-          });
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/flow/rate", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/flow/rate");
-          });
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/flow/total", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/flow/total");
-          });
-          mqttClient.subscribe(MQTT_TOPIC_BASE + "/relay/status", (err) => {
-            if (!err) console.log("✅ Subscribed to: " + MQTT_TOPIC_BASE + "/relay/status");
+          // Subscribe to topics for ALL motors
+          MOTORS.forEach(motor => {
+              const base = motor.topic_base;
+              mqttClient.subscribe(base + "/dht22");
+              mqttClient.subscribe(base + "/soil");
+              mqttClient.subscribe(base + "/flow");
+              mqttClient.subscribe(base + "/flow/rate");
+              mqttClient.subscribe(base + "/flow/total");
+              mqttClient.subscribe(base + "/relay/status");
+              console.log("✅ Subscribed to topics for: " + base);
           });
         });
 
@@ -1122,60 +1120,67 @@
 
         mqttClient.on("message", (topic, message) => {
           try {
-            let msg = message.toString();
-            console.log("📩 Topic: " + topic + " | Message: " + msg);
+            let rawMsg = message.toString();
+            console.log("📩 Topic: " + topic + " | Message: " + rawMsg);
 
-            const relayEl = document.getElementById(DEVICE_ID_SAFE + "_relay_status");
-            const hint = document.getElementById("saveHint");
+            // 1. Identify which motor this belongs to
+            let targetMotor = MOTORS.find(m => topic.startsWith(m.topic_base));
+            if (!targetMotor) return; // ignore unknown devices
 
-            // Handle individual topic messages (simple format from home.html)
-            if (topic === MQTT_TOPIC_BASE + "/dht22") {
-              console.log("✓ Processing dht22 message: " + msg);
-              // Parse "25.5, 70" format
-              const parts = msg.split(",");
+            let devIdSafe = targetMotor.id_safe;
+            let sensor = sensorStates[devIdSafe];
+
+            // 2. Attempt to parse JSON
+            let msg = rawMsg;
+            let jsonData = null;
+            try {
+                if (rawMsg.trim().startsWith('{')) {
+                    jsonData = JSON.parse(rawMsg);
+                }
+            } catch (e) {}
+
+            const relayEl = document.getElementById(devIdSafe + "_relay_status");
+            const hint = document.getElementById("saveHint_" + devIdSafe);
+
+            const getValue = (key, fallback) => {
+                if (jsonData && jsonData[key] !== undefined) return jsonData[key];
+                return fallback;
+            };
+
+            // 3. Update state and UI
+            if (topic.endsWith("/dht22")) {
+              let val = getValue('dht22', msg);
+              const parts = String(val).split(",");
               const temp = parts[0] ? parts[0].trim() : "--";
               const humidity = parts[1] ? parts[1].trim() : "--";
-              const formattedMsg = temp + "°C, " + humidity + "%";
-              document.getElementById(DEVICE_ID_SAFE + "_dht22").innerText = formattedMsg;
+              document.getElementById(devIdSafe + "_dht22").innerText = temp + "°C, " + humidity + "%";
               sensor.temp = parseFloat(parts[0]) || null;
               sensor.hum = parseFloat(parts[1]) || null;
-              console.log("  Temp: " + sensor.temp + ", Hum: " + sensor.hum);
+            }
+            else if (topic.endsWith("/soil")) {
+              let val = getValue('soil', msg);
+              document.getElementById(devIdSafe + "_soil").innerText = val + " %";
+              sensor.soil = parseFloat(val) || null;
+            }
+            else if (topic.endsWith("/flow") || topic.endsWith("/flow/total")) {
+              let val = getValue('flow', getValue('total', msg));
+              document.getElementById(devIdSafe + "_flow").innerText = val + " L";
+              sensor.total_volume = parseFloat(val) || null;
+            }
+            else if (topic.endsWith("/flow/rate")) {
+              let val = getValue('rate', msg);
+              document.getElementById(devIdSafe + "_flow").innerText = val + " L/min";
+              sensor.flow = parseFloat(val) || 0;
+            }
+            else if (topic.endsWith("/relay/status")) {
+              let val = getValue('status', msg);
+              relayEl.innerText = val;
+              relayEl.className = val === "ON" ? "status-on" : "status-off";
+              sensor.motor = val;
             }
 
-            else if (topic === MQTT_TOPIC_BASE + "/soil") {
-              console.log("✓ Processing soil message: " + msg);
-              document.getElementById(DEVICE_ID_SAFE + "_soil").innerText = msg + " %";
-              sensor.soil = parseFloat(msg) || null;
-            }
-
-            else if (topic === MQTT_TOPIC_BASE + "/flow") {
-              console.log("✓ Processing flow message: " + msg);
-              document.getElementById(DEVICE_ID_SAFE + "_flow").innerText = msg + " L";
-              sensor.total_volume = parseFloat(msg) || null;
-            }
-
-            else if (topic === MQTT_TOPIC_BASE + "/flow/rate") {
-              console.log("✓ Processing flow/rate message: " + msg);
-              document.getElementById(DEVICE_ID_SAFE + "_flow").innerText = msg + " L/min";
-              sensor.flow = parseFloat(msg) || 0;
-            }
-
-            else if (topic === MQTT_TOPIC_BASE + "/flow/total") {
-              console.log("✓ Processing flow/total message: " + msg);
-              document.getElementById(DEVICE_ID_SAFE + "_flow").innerText = msg + " L";
-              sensor.total_volume = parseFloat(msg) || null;
-            }
-
-            else if (topic === MQTT_TOPIC_BASE + "/relay/status") {
-              console.log("✓ Processing relay status: " + msg);
-              relayEl.innerText = msg;
-              relayEl.className = msg === "ON" ? "status-on" : "status-off";
-              sensor.motor = msg;
-            }
-
-            // Update UI and schedule save
             hint.innerText = `Last update: ${nowIso()} — saving when new data arrives.`;
-            scheduleSave();
+            scheduleSave(devIdSafe);
 
           } catch (err) {
             console.error("❌ Failed to handle MQTT message:", err);
@@ -1194,42 +1199,42 @@
 
 
       // Debounced/throttled save logic
-      function scheduleSave() {
+      function scheduleSave(devIdSafe) {
+        let sensor = sensorStates[devIdSafe];
         const now = Date.now();
-        if (now - lastSavedAt >= SAVE_INTERVAL_MS) {
-          doSave();
+        if (now - sensor.lastSavedAt >= SAVE_INTERVAL_MS) {
+          doSave(devIdSafe);
         } else {
-          if (!pendingSave) {
-            pendingSave = true;
+          if (!sensor.pendingSave) {
+            sensor.pendingSave = true;
             setTimeout(() => {
-              pendingSave = false;
-              doSave();
-            }, SAVE_INTERVAL_MS - (now - lastSavedAt));
+              sensor.pendingSave = false;
+              doSave(devIdSafe);
+            }, SAVE_INTERVAL_MS - (now - sensor.lastSavedAt));
           }
         }
       }
 
-      function doSave() {
+      function doSave(devIdSafe) {
+        let sensor = sensorStates[devIdSafe];
+        let targetMotor = MOTORS.find(m => m.id_safe === devIdSafe);
         const now = Date.now();
 
-        // Compute elapsed since previous save (in ms). Use at least SAVE_INTERVAL_MS when prevSaveTime is not set.
-        const elapsedMs = prevSaveTime ? Math.max(1, now - prevSaveTime) : SAVE_INTERVAL_MS;
-        prevSaveTime = now;
+        const elapsedMs = sensor.prevSaveTime ? Math.max(1, now - sensor.prevSaveTime) : SAVE_INTERVAL_MS;
+        sensor.prevSaveTime = now;
+        sensor.lastSavedAt = now;
 
-        lastSavedAt = now;
         const form = new FormData();
         form.append("save_sensor", "1");
-        form.append("motor_id", 1);
-        form.append("device_id", MQTT_TOPIC_BASE);
+        form.append("motor_id", targetMotor.id);
+        form.append("device_id", targetMotor.topic_base);
         form.append("temperature", sensor.temp);
         form.append("humidity", sensor.hum);
         form.append("soil", sensor.soil);
-        // send flow rate (L/min) — server expects a numeric value here for water_flow
         form.append("flow", sensor.flow);
         form.append("motor", sensor.motor ?? "OFF");
 
-        // provide small visual hint
-        const hint = document.getElementById("saveHint");
+        const hint = document.getElementById("saveHint_" + devIdSafe);
         hint.innerText = "Saving latest reading...";
         hint.style.opacity = "0.9";
 
@@ -1237,58 +1242,48 @@
           .then(r => r.json())
           .then(j => {
             if (j && j.status === "saved") {
-              // Calculate liters added since last save using flow rate (L/min)
               const flowRate = (typeof sensor.flow === "number" && !isNaN(sensor.flow)) ? sensor.flow : 0;
               const minutes = elapsedMs / 60000;
               const litersAdded = flowRate * minutes;
-              cumulativeFlow += litersAdded;
+              sensor.cumulativeFlow += litersAdded;
 
-              // Show cumulative briefly in hint
-              hint.innerText = `Saved — cumulative since last alert: ${cumulativeFlow.toFixed(2)} L`;
+              hint.innerText = `Saved — cumulative: ${sensor.cumulativeFlow.toFixed(2)} L`;
               hint.style.opacity = "1";
 
-              // Check threshold and cooldown
               const nowCheck = Date.now();
-              if (cumulativeFlow >= THRESHOLD_LITERS && (nowCheck - lastWebhookAt) > WEBHOOK_COOLDOWN_MS) {
-                // Trigger webhook
+              if (sensor.cumulativeFlow >= THRESHOLD_LITERS && (nowCheck - lastWebhookAt) > WEBHOOK_COOLDOWN_MS) {
                 sendWebhook({
                   farmer_id: FARMER_ID,
-                  device_id: MQTT_TOPIC_BASE,
-                  cumulative_flow: Number(cumulativeFlow.toFixed(3)),
+                  device_id: targetMotor.topic_base,
+                  cumulative_flow: Number(sensor.cumulativeFlow.toFixed(3)),
                   threshold: THRESHOLD_LITERS,
                   detected_at: new Date().toISOString()
                 }).then(success => {
                   if (success) {
                     lastWebhookAt = Date.now();
-                    // reset cumulative after successful trigger so it doesn't keep firing
-                    cumulativeFlow = 0.0;
+                    sensor.cumulativeFlow = 0.0;
                     hint.innerText = "Alert sent — cumulative reset.";
                   } else {
-                    // if webhook failed, leave cumulativeFlow so it'll retry later
-                    hint.innerText = "Alert failed to send — will retry when threshold reached again.";
+                    hint.innerText = "Alert failed — retrying later.";
                   }
                 });
               } else {
-                // restore standard hint after short delay
                 setTimeout(() => {
-                  hint.innerText = "Live readings are being saved every 30 seconds when new data arrives.";
+                  hint.innerText = "Live readings are being saved every 30 seconds.";
                 }, 3000);
               }
 
-              // NEW CODE: Server-side threshold check for Twilio call (uses total water usage)
               if (typeof sensor.total_volume === "number" && !isNaN(sensor.total_volume)) {
                 checkWaterUsageThreshold(sensor.total_volume);
               }
             } else {
-              hint.innerText = "Save failed (check server).";
+              hint.innerText = "Save failed.";
               hint.style.opacity = "1";
-              console.warn("Save response:", j);
             }
           })
           .catch(err => {
             hint.innerText = "Save failed (network).";
             hint.style.opacity = "1";
-            console.error(err);
           });
       }
 
