@@ -2,13 +2,83 @@
 
 A comprehensive water monitoring system for farmers with leak detection, motor control, and groundwater tracking.
 
+## 📖 Project Overview
+
+**FlowGuard** is an intelligent irrigation management and water monitoring platform designed specifically for farmers and agricultural stakeholders. The system provides real-time monitoring of water usage, automated leak detection using machine learning, and motor control capabilities to optimize water conservation and reduce agricultural waste.
+
+### Key Features:
+
+✅ **Real-Time Water Monitoring** - Track water usage patterns and groundwater levels continuously  
+✅ **AI-Powered Leak Detection** - Machine learning models automatically identify anomalies and potential leaks  
+✅ **Smart Motor Control** - Manage irrigation motors and control water flow remotely  
+✅ **Multi-User System** - Separate dashboards for Farmers and Administrators  
+✅ **Sensor Integration** - IoT connectivity via MQTT for real-time data collection  
+✅ **Analytics & Reporting** - Comprehensive charts, reports, and usage analytics  
+✅ **Alert System** - Instant notifications for critical events (leaks, over-usage, system failures)  
+✅ **User Authentication** - Secure login system with role-based access control  
+
+### Use Cases:
+
+- **Leak Detection**: Automatic identification of pipeline leaks and water wastage
+- **Water Conservation**: Monitor and optimize water usage for sustainable farming
+- **Predictive Maintenance**: Predict motor failures and maintenance needs
+- **Compliance Reporting**: Generate reports for government schemes and agricultural programs
+- **Cost Optimization**: Reduce water bills and electricity costs through efficient irrigation
+
+---
+
 ## 🏗️ Project Architecture
 
-- **Frontend**: PHP (XAMPP)
-- **Backend APIs**: Python Flask (multiple servers)
-- **Database**: MySQL
-- **Real-time**: MQTT
-- **ML**: Leak detection models (scikit-learn)
+- **Frontend**: PHP (XAMPP) - Web UI with Bootstrap/Modern design
+- **Backend APIs**: Python Flask (multiple servers) - Leak detection & prediction APIs
+- **Database**: MySQL - Persistent data storage for users, sensors, alerts
+- **Real-time**: MQTT - IoT sensor data collection and motor commands
+- **Machine Learning**: scikit-learn - Leak detection models with data preprocessing
+
+## 🎯 Core Modules
+
+### 1. **Leak Detection Engine**
+   - ML-based anomaly detection using water usage patterns
+   - Real-time analysis of sensor data
+   - Automatic alerts when abnormal usage detected
+   - Historical pattern analysis for accuracy
+
+### 2. **User Management**
+   - **Admin Dashboard**: System-wide monitoring, user management, global settings
+   - **Farmer Dashboard**: Personal water statistics, motor control, alerts
+   - **Registration & Authentication**: Secure signup and login mechanisms
+
+### 3. **Motor Control System**
+   - Remote on/off switching for irrigation motors
+   - Scheduled automation for automatic irrigation
+   - Usage tracking and consumption analytics
+   - Fault detection and maintenance alerts
+
+### 4. **Sensor Integration**
+   - MQTT subscriber for IoT device connectivity
+   - Support for multiple sensor types (water flow, pressure, moisture)
+   - Real-time data ingestion and processing
+   - Data validation and anomaly flagging
+
+### 5. **Analytics & Reporting**
+   - Water usage charts and trend analysis
+   - Financial impact calculations (cost savings)
+   - Export functionality for reports
+   - Predictive analytics for water demand forecasting
+
+---
+
+## 🛠️ Technology Stack
+
+| Component | Technology | Purpose |
+|-----------|-----------|---------|
+| **Backend Server** | Python Flask | RESTful APIs and ML predictions |
+| **Frontend** | PHP (XAMPP) | Web interface and user dashboards |
+| **Database** | MySQL | Data persistence |
+| **ML Framework** | scikit-learn | Leak detection algorithms |
+| **Real-time Communication** | MQTT | IoT sensor data exchange |
+| **Dependency Management** | Composer (PHP), pip (Python) | Package management |
+| **Processing** | pandas, NumPy | Data manipulation and analysis |
 
 ---
 
@@ -405,7 +475,7 @@ For issues or questions:
 
 ## 📄 License
 
-Created by Team VectorOne
+[Your License Here]
 
 ---
 
