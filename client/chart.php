@@ -31,7 +31,7 @@ if ($city) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
     curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
     $geoResp = curl_exec($ch);
-    curl_close($ch);
+    // curl_close($ch); // Deprecated in PHP 8.5+
 
     $geoData = json_decode($geoResp, true);
     
@@ -50,7 +50,7 @@ if ($city) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $respF = curl_exec($ch);
-        curl_close($ch);
+        // curl_close($ch); // Deprecated in PHP 8.5+
         
         $dataF = json_decode($respF, true);
         if (isset($dataF['list'])) {
@@ -78,7 +78,7 @@ if ($city) {
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
         $respH = curl_exec($ch);
-        curl_close($ch);
+        // curl_close($ch); // Deprecated in PHP 8.5+
 
         $dataH = json_decode($respH, true);
         
